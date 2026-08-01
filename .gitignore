@@ -1,0 +1,35 @@
+# Ambiente Virtual
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python / Byte-code / Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Banco de dados local e backups
+*.db
+*.sqlite
+*.sqlite3
+
+# Arquivos temporários e de saída do Word/Documentos
+*.docx
+!modelos/*.docx  # Remova a '!' se quiser ignorar mesmo modelos de documentos
+~$*.docx
+
+# Configurações do ambiente de desenvolvimento / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs e arquivos de sistema
+*.log
+.DS_Store
+Thumbs.db
