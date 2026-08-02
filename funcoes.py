@@ -4,6 +4,7 @@ import shutil
 import sqlite3
 import sys
 import time
+import subprocess
 from datetime import datetime
 import tkinter as tk
 from tkinter import filedialog
@@ -29,7 +30,8 @@ CINZA_ESCURO = Fore.BLACK + Style.BRIGHT
 
 def limpar_terminal() -> None:
     """Limpa a tela do terminal e o buffer de rolagem."""
-    os.system("cls" if os.name == "nt" else "clear")
+    comando = "cls" if os.name == "nt" else "clear"
+    subprocess.run(comando, shell=True)
 
 
 def menu_pausa() -> None:
@@ -271,7 +273,13 @@ def preencher_docx(conn: sqlite3.Connection) -> None:
             substituir_texto_docx(doc, dados)
             doc.save(destino)
             print(f"\n{VERDE}[OK] Documento gerado com sucesso!{RESET}")
-            os.startfile(destino) if os.name == 'nt' else os.system(f'xdg-open "{destino}"')
+            
+            # Atualizado para evitar o uso do os.system no Linux
+            if os.name == 'nt':
+                os.startfile(destino)
+            else:
+                subprocess.run(["xdg-open", destino], check=False)
+
         except Exception as e:
             print(f"{VERMELHO}[!] Erro ao gerar/abrir documento: {e}{RESET}")
         time.sleep(2)
@@ -363,25 +371,55 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 time.sleep(1.5)
                 break
 
-            print(f"\n{AZUL}--- BUSCA CLIENTES | Pág: {pagina + 1}/{total_paginas} ---{RESET}")
+            print(f"\n{AZUL}===================== CLIENTES | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} ====================={RESET}")
+            
             for i, r in enumerate(rows):
                 print("-" * 80)
-                print(f"{VERDE}{i + 1}.{RESET} 👤 {r['NOME']} | RG: {r['IDENTIDADE']} | CPF/CNPJ: {r['CPF_CNPJ']}")
-                print(f"   End: {r['ENDERECO']} | Tel: {r['TELEFONE']} | Email: {r['EMAIL']}")
-                print(f"   Obs: {r['OBS']}")
+                # Tratamento para valores Nulos / Vazios
+                rg = r['IDENTIDADE'] if r['IDENTIDADE'] else 'N/A'
+                profissao = r['PROFISSAO'] if r['PROFISSAO'] else 'N/A'
+                est_civil = r['ESTADO_CIVIL'] if r['ESTADO_CIVIL'] else 'N/A'
+                tel = r['TELEFONE'] if r['TELEFONE'] else 'N/A'
+                email = r['EMAIL'] if r['EMAIL'] else 'N/A'
+                end = r['ENDERECO'] if r['ENDERECO'] else 'N/A'
+
+                # Linha 1: Nome e Identificação
+                print(f"{VERDE}{i + 1}.{RESET} 👤 {AMARELO}{r['NOME']}{RESET}")
+                print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg}")
+                
+                # Linha 2: Dados Pessoais / Profissionais
+                print(f"   💼 PROFISSÃO: {profissao} | 💍 EST. CIVIL: {est_civil}")
+                
+                # Linha 3: Contatos
+                print(f"   📞 TEL: {tel} | ✉️  EMAIL: {email}")
+                
+                # Linha 4: Endereço
+                print(f"   🏠 ENDEREÇO: {end}")
+                
+                # Linha 5: Observações (se houver)
+                if r['OBS']:
+                    print(f"   📝 OBS: {r['OBS']}")
+            
             print("-" * 80)
 
-            acao = input("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar: ").strip().lower()
-            if acao == "q": break
-            elif acao == ">" and pagina + 1 < total_paginas: pagina += 1
-            elif acao == "<" and pagina > 0: pagina -= 1
-            elif acao == "g": preencher_docx(conn)
+            print("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
+            acao = input("Comando: ").strip().lower()
+
+            if acao == "q": 
+                break
+            elif acao in (">", ".") and pagina + 1 < total_paginas: 
+                pagina += 1
+            elif acao in ("<", ",") and pagina > 0: 
+                pagina -= 1
+            elif acao == "g": 
+                preencher_docx(conn)
             elif acao.startswith("e"):
                 try:
-                    idx = int(acao.replace("e", "")) - 1
+                    idx = int(acao.replace("e", "").strip()) - 1
                     if 0 <= idx < len(rows):
                         editar_cliente(conn, rows[idx]['CPF_CNPJ'])
-                except ValueError: pass
+                except ValueError: 
+                    pass
 
 
 def editar_cliente(conn: sqlite3.Connection, cpf: str) -> None:
@@ -471,6 +509,12 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 WHERE PROCESSO LIKE ? OR CLIENTE LIKE ? OR PARTE_CONTRARIA LIKE ? OR CPF_CNPJ LIKE ?
             """, (termo, termo, termo, termo))
             total = cursor.fetchone()[0]
+            
+            if total == 0:
+                print(f"\n{AMARELO}[!] Nenhum processo encontrado.{RESET}")
+                time.sleep(1.5)
+                break
+
             total_paginas = max(1, (total + limite - 1) // limite)
 
             cursor.execute("""
@@ -480,44 +524,239 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
             """, (termo, termo, termo, termo, limite, pagina * limite))
             rows = cursor.fetchall()
 
-            print(f"\n{AZUL}--- PROCESSOS | Pág: {pagina + 1}/{total_paginas} ---{RESET}")
+            print(f"\n{AZUL}===================== PROCESSOS | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} ====================={RESET}")
             for i, r in enumerate(rows):
+                # Tratamento de valores Nulos / Vazios
+                cartorio = r['CARTORIO'] if r['CARTORIO'] else 'N/A'
+                distribuicao = r['DISTRIBUICAO'] if r['DISTRIBUICAO'] else 'N/A'
+                ult_verif = r['ULTIMA_VERIFICACAO'] if r['ULTIMA_VERIFICACAO'] else 'N/A'
+                cpf_cnpj = r['CPF_CNPJ'] if r['CPF_CNPJ'] else 'N/A'
+                contraria = r['PARTE_CONTRARIA'] if r['PARTE_CONTRARIA'] else 'N/A'
+                obs = r['OBS'] if r['OBS'] else ''
+
+                # Formatação da cor da Situação
+                sit_str = r['SITUACAO'] if r['SITUACAO'] else 'N/A'
+                if sit_str == "ATIVO":
+                    sit_cor = f"{VERDE}{sit_str}{RESET}"
+                elif sit_str == "CONCLUIDO":
+                    sit_cor = f"{VERMELHO}{sit_str}{RESET}"
+                else:
+                    sit_cor = sit_str
+
                 print("-" * 80)
-                print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {r['PROCESSO']} | SITUAÇÃO: {r['SITUACAO']}")
-                print(f"   CLIENTE: {r['CLIENTE']} | CONTRÁRIO: {r['PARTE_CONTRARIA']}")
-                print(f"   CARTÓRIO: {r['CARTORIO']} | ÚLT. VERIF: {r['ULTIMA_VERIFICACAO']}")
+                # Linha 1: Identificador e Situação
+                print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AMARELO}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
+                
+                # Linha 2: Partes do Processo
+                print(f"   👤 CLIENTE: {r['CLIENTE']} (CPF/CNPJ: {cpf_cnpj})")
+                print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
+                
+                # Linha 3: Local e Datas
+                print(f"   🏛️  CARTÓRIO: {cartorio}")
+                print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
+                
+                # Linha 4: Observações (se houver)
+                if obs:
+                    print(f"   📝 OBS: {obs}")
+
             print("-" * 80)
 
-            acao = input("[<] Ant | [>] Próx | [A+Nº] Atualizar Visto | [Q] Voltar: ").strip().lower()
+            print("[<] Ant | [>] Próx | [A+Nº] Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
+            acao = input("Comando: ").strip().lower()
+
             if acao == "q": break
-            elif acao == ">" and pagina + 1 < total_paginas: pagina += 1
-            elif acao == "<" and pagina > 0: pagina -= 1
+            elif acao in (">", ".") and pagina + 1 < total_paginas: pagina += 1
+            elif acao in ("<", ",") and pagina > 0: pagina -= 1
+            elif acao == "g": preencher_docx(conn)
             elif acao.startswith("a"):
                 try:
-                    idx = int(acao.replace("a", "")) - 1
+                    idx = int(acao.replace("a", "").strip()) - 1
                     if 0 <= idx < len(rows):
                         cursor.execute("UPDATE processos SET ULTIMA_VERIFICACAO = ? WHERE PROCESSO = ?", (hoje(), rows[idx]['PROCESSO']))
                         conn.commit()
+                        print(f"{VERDE}[OK] Data de verificação atualizada!{RESET}")
+                        time.sleep(0.8)
+                except ValueError: pass
+            elif acao.startswith("e"):
+                try:
+                    idx = int(acao.replace("e", "").strip()) - 1
+                    if 0 <= idx < len(rows):
+                        editar_processo(conn, rows[idx]['PROCESSO'])
                 except ValueError: pass
 
 
-def ver_andamento(conn: sqlite3.Connection) -> None:
-    limpar_terminal()
+def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
+    processo_id = proc_direto
+
+    if not processo_id:
+        busca, cancelou = input_cancelavel("Digite o número do processo para editar")
+        if cancelou or not busca:
+            return
+        processo_id = formatar_processo(busca)
+
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT * FROM processos 
-        WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
-        ORDER BY ULTIMA_VERIFICACAO ASC
-    """)
-    rows = cursor.fetchall()
+        SELECT CLIENTE, PARTE_CONTRARIA, CARTORIO, SITUACAO, DISTRIBUICAO, OBS 
+        FROM processos WHERE PROCESSO = ?
+    """, (processo_id,))
+    row = cursor.fetchone()
 
-    if not rows:
-        print(f"\n{VERDE}[OK] Nenhum processo parado há mais de 25 dias!{RESET}")
+    if not row:
+        print(f"{VERMELHO}[!] Processo não encontrado.{RESET}")
         time.sleep(1.5)
         return
 
-    print(f"\n{AMARELO}-------------- PROCESSOS PARADOS (HÁ 25+ DIAS) --------------{RESET}")
-    for i, r in enumerate(rows):
-        print(f"{VERDE}{i + 1}.{RESET} PROC: {r['PROCESSO']} | Client: {r['CLIENTE']} | ÚLTIMA VERIF: {r['ULTIMA_VERIFICACAO']}")
+    dados = dict(row)
+    houve_alteracao = False
+
+    while True:
+        limpar_terminal()
+        print(f"\n{AZUL}Processo: {RESET}{processo_id}")
+        print(f"1. Cliente (Nome)    : {dados['CLIENTE']}")
+        print(f"2. Parte Contrária   : {dados['PARTE_CONTRARIA']}")
+        print(f"3. Cartório          : {dados['CARTORIO']}")
+        print(f"4. Situação          : {dados['SITUACAO']}")
+        print(f"5. Distribuição      : {dados['DISTRIBUICAO']}")
+        print(f"6. Observações       : {dados['OBS']}")
+        print(f"0. {VERDE}SALVAR ALTERAÇÕES{RESET}")
+        print("q. Cancelar e Sair")
+
+        opcao, cancelou = input_cancelavel("\nEscolha o campo para editar")
+        if cancelou or opcao.lower() == "q":
+            return
+        if opcao == "0":
+            break
+
+        houve_alteracao = True
+        if opcao == "1":
+            v, _ = input_cancelavel("Novo Nome do Cliente")
+            if v: dados['CLIENTE'] = v.upper()
+        elif opcao == "2":
+            v, _ = input_cancelavel("Nova Parte Contrária")
+            if v: dados['PARTE_CONTRARIA'] = v.upper()
+        elif opcao == "3":
+            v, _ = input_cancelavel("Novo Cartório")
+            if v: dados['CARTORIO'] = v.upper()
+        elif opcao == "4":
+            v, _ = input_cancelavel("Nova Situação ([1] ATIVO / [2] CONCLUIDO)")
+            if v == "2": dados['SITUACAO'] = "CONCLUIDO"
+            elif v == "1": dados['SITUACAO'] = "ATIVO"
+        elif opcao == "5":
+            v, _ = input_cancelavel("Nova Data Distribuição (DDMMAAAA)")
+            if v: dados['DISTRIBUICAO'] = formatar_data(v)
+        elif opcao == "6":
+            v, _ = input_cancelavel("Nova Observação")
+            if v: dados['OBS'] = v.upper()
+        else:
+            print(f"{AMARELO}Opção inválida.{RESET}")
+            houve_alteracao = False
+            time.sleep(1)
+
+    if houve_alteracao:
+        try:
+            cursor.execute("""
+                UPDATE processos SET 
+                    CLIENTE = ?, PARTE_CONTRARIA = ?, CARTORIO = ?, 
+                    SITUACAO = ?, DISTRIBUICAO = ?, OBS = ?, ULTIMA_VERIFICACAO = ? 
+                WHERE PROCESSO = ?
+            """, (dados['CLIENTE'], dados['PARTE_CONTRARIA'], dados['CARTORIO'], 
+                  dados['SITUACAO'], dados['DISTRIBUICAO'], dados['OBS'].strip(), hoje(), processo_id))
+            conn.commit()
+            print(f"\n{VERDE}[OK] Processo atualizado com sucesso!{RESET}")
+        except Exception as e:
+            print(f"{VERMELHO}[ERRO] Falha ao atualizar: {e}{RESET}")
+    else:
+        print("\nNenhuma alteração foi feita.")
     
-    menu_pausa()
+    time.sleep(1.5)
+
+
+def ver_andamento(conn: sqlite3.Connection) -> None:
+    pagina = 0
+    limite = 5
+
+    while True:
+        limpar_terminal()
+        cursor = conn.cursor()
+        
+        # 1. Contagem total de processos parados há +25 dias
+        cursor.execute("""
+            SELECT COUNT(*) FROM processos 
+            WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
+        """)
+        total = cursor.fetchone()[0]
+
+        if total == 0:
+            print(f"\n{VERDE}[OK] Nenhum processo parado há mais de 25 dias!{RESET}")
+            time.sleep(1.5)
+            return
+
+        total_paginas = max(1, (total + limite - 1) // limite)
+        
+        # Ajuste de segurança para o índice da página
+        if pagina >= total_paginas:
+            pagina = total_paginas - 1
+
+        # 2. Busca paginada dos registros
+        cursor.execute("""
+            SELECT * FROM processos 
+            WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
+            ORDER BY ULTIMA_VERIFICACAO ASC LIMIT ? OFFSET ?
+        """, (limite, pagina * limite))
+        rows = cursor.fetchall()
+
+        # 3. Exibição da Interface
+        print(f"\n{AMARELO}-------------- PROCESSOS PARADOS (HÁ 25+ DIAS) | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} --------------{RESET}")
+        for i, r in enumerate(rows):
+            print("-" * 80)
+            print(f"{VERDE}{i + 1}.{RESET} 🏛️  CARTÓRIO: {r['CARTORIO']}")
+            print(f"     📄 PROC: {r['PROCESSO']} | SITUAÇÃO: {VERDE}{r['SITUACAO']}{RESET}")
+            print(f"     ⚠️  ÚLT. VERIF: {r['ULTIMA_VERIFICACAO']} | 📅 DISTR: {r['DISTRIBUICAO']}")
+            print(f"     👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {r['CPF_CNPJ']}")
+            print(f"     ⚔️  CONTRÁRIO: {r['PARTE_CONTRARIA']}")
+            print(f"     📝 OBS: {r['OBS']}")
+        print("-" * 80)
+
+        # 4. Navegação e Comandos
+        print("[<] Ant | [>] Próx | [A+Nº] Atualizar Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
+        acao = input("Comando: ").strip().lower()
+
+        if acao == "q" or acao == "":
+            break
+        elif acao in (">", ".") and pagina + 1 < total_paginas:
+            pagina += 1
+        elif acao in ("<", ",") and pagina > 0:
+            pagina -= 1
+        elif acao == "g":
+            preencher_docx(conn)
+        elif acao.startswith("a"):
+            try:
+                idx = int(acao.replace("a", "").strip()) - 1
+                if 0 <= idx < len(rows):
+                    cursor.execute(
+                        "UPDATE processos SET ULTIMA_VERIFICACAO = ? WHERE PROCESSO = ?",
+                        (hoje(), rows[idx]['PROCESSO'])
+                    )
+                    conn.commit()
+                    print(f"{VERDE}[OK] Data de verificação atualizada!{RESET}")
+                    time.sleep(0.8)
+                else:
+                    print(f"{VERMELHO}[!] Número inválido.{RESET}")
+                    time.sleep(1)
+            except ValueError:
+                print(f"{VERMELHO}[!] Use 'a' + número.{RESET}")
+                time.sleep(1)
+        elif acao.startswith("e"):
+            try:
+                idx = int(acao.replace("e", "").strip()) - 1
+                if 0 <= idx < len(rows):
+                    editar_processo(conn, rows[idx]['PROCESSO'])
+                else:
+                    print(f"{VERMELHO}[!] Número inválido.{RESET}")
+                    time.sleep(1)
+            except ValueError:
+                print(f"{VERMELHO}[!] Use 'e' + número.{RESET}")
+                time.sleep(1)
+        else:
+            print(f"{VERMELHO}🚨 Opção inválida.{RESET}")
+            time.sleep(0.8)
