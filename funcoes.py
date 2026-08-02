@@ -228,7 +228,7 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
         dados["<<PROCESSO>>"] = row["PROCESSO"] or ""
         dados["<<CPF_CNPJ>>"] = row["CPF_CNPJ"] or ""
         dados["<<CLIENTE>>"] = (row["CLIENTE"] or "").upper()
-        dados["<<REU>>"] = (row["PARTE_CONTRARIA"] or "").upper()
+        dados["<<PARTECONTRARIA>>"] = (row["PARTE_CONTRARIA"] or "").upper()
         dados["<<CARTÓRIO>>"] = (row["CARTORIO"] or "").upper()
         
         dados["<<DD>>"] = dt.strftime("%d")
