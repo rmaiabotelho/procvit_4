@@ -214,34 +214,70 @@ def substituir_texto_docx(doc: Document, substituicoes: Dict[str, str]) -> None:
 def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, str]:
     dados = {}
     cursor = conn.cursor()
+    
+    # 1. Tenta buscar primeiro na tabela de processos
     cursor.execute("""
         SELECT PROCESSO, CPF_CNPJ, CLIENTE, PARTE_CONTRARIA, CARTORIO 
         FROM processos WHERE PROCESSO = ? OR CPF_CNPJ = ? LIMIT 1
     """, (busca, busca))
     row = cursor.fetchone()
 
-    if row:
-        dt = datetime.now()
-        meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", 
-                 "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    cpf_cnpj_alvo = None
 
+    if row:
+        cpf_cnpj_alvo = row["CPF_CNPJ"]
         dados["<<PROCESSO>>"] = row["PROCESSO"] or ""
         dados["<<CPF_CNPJ>>"] = row["CPF_CNPJ"] or ""
         dados["<<CLIENTE>>"] = (row["CLIENTE"] or "").upper()
         dados["<<PARTECONTRARIA>>"] = (row["PARTE_CONTRARIA"] or "").upper()
         dados["<<CARTÓRIO>>"] = (row["CARTORIO"] or "").upper()
+    else:
+        # 2. Se não achou em processos, busca direto na tabela de clientes pelo CPF
+        cursor.execute("SELECT CPF_CNPJ, NOME FROM clientes WHERE CPF_CNPJ = ?", (busca,))
+        row_cli = cursor.fetchone()
+        if row_cli:
+            cpf_cnpj_alvo = row_cli["CPF_CNPJ"]
+            dados["<<CPF_CNPJ>>"] = row_cli["CPF_CNPJ"] or ""
+            dados["<<CLIENTE>>"] = (row_cli["NOME"] or "").upper()
+            dados["<<PROCESSO>>"] = ""
+            dados["<<PARTECONTRARIA>>"] = ""
+            dados["<<CARTÓRIO>>"] = ""
+
+    # 3. Preenche as datas atuais do sistema
+    if cpf_cnpj_alvo:
+        dt = datetime.now()
+        meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", 
+                 "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
         
         dados["<<DD>>"] = dt.strftime("%d")
         dados["<<MM>>"] = meses[dt.month - 1]
         dados["<<AAAA>>"] = dt.strftime("%Y")
 
-        cursor.execute("SELECT ENDERECO, PROFISSAO, ESTADO_CIVIL, IDENTIDADE FROM clientes WHERE CPF_CNPJ = ?", (row["CPF_CNPJ"],))
+        # 4. Completa com TODOS os dados pessoais do cliente (incluindo EMAIL e DATA_NASCIMENTO)
+        cursor.execute("""
+            SELECT ENDERECO, PROFISSAO, ESTADO_CIVIL, IDENTIDADE, EMAIL, DATA_NASCIMENTO 
+            FROM clientes WHERE CPF_CNPJ = ?
+        """, (cpf_cnpj_alvo,))
         row_c = cursor.fetchone()
+        
         if row_c:
             dados["<<ENDEREÇO>>"] = row_c["ENDERECO"] or ""
             dados["<<PROFISSÃO>>"] = (row_c["PROFISSAO"] or "").lower()
             dados["<<ESTADO CIVIL>>"] = (row_c["ESTADO_CIVIL"] or "").lower()
             dados["<<RG>>"] = row_c["IDENTIDADE"] or ""
+            
+            # --- NOVOS CAMPOS ADICIONADOS ---
+            dados["<<EMAIL>>"] = (row_c["EMAIL"] or "").lower()
+            
+            # Formata a data de nascimento (se estiver no formato YYYY-MM-DD converte para DD/MM/AAAA)
+            data_nasc_raw = row_c["DATA_NASCIMENTO"] or ""
+            if len(data_nasc_raw) == 10 and "-" in data_nasc_raw:
+                partes = data_nasc_raw.split("-")
+                dados["<<DATA_NASCIMENTO>>"] = f"{partes[2]}/{partes[1]}/{partes[0]}"
+                dados["<<NASCIMENTO>>"] = f"{partes[2]}/{partes[1]}/{partes[0]}"
+            else:
+                dados["<<DATA_NASCIMENTO>>"] = data_nasc_raw
+                dados["<<NASCIMENTO>>"] = data_nasc_raw
 
     return dados
 
