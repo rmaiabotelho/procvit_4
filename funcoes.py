@@ -13,10 +13,9 @@ from typing import Dict, List, Optional, Tuple
 from colorama import Fore, Style, init
 from docx import Document
 
-# Inicializa o Colorama para suporte a cores ANSI (Windows/Linux/Mac)
+# Inicializa o Colorama
 init(autoreset=True)
 
-# Definição de Cores
 RESET = Style.RESET_ALL
 VERMELHO = Fore.RED + Style.BRIGHT
 VERDE = Fore.GREEN + Style.BRIGHT
@@ -29,7 +28,6 @@ CINZA_ESCURO = Fore.BLACK + Style.BRIGHT
 
 
 def limpar_terminal() -> None:
-    """Limpa a tela do terminal e o buffer de rolagem."""
     comando = "cls" if os.name == "nt" else "clear"
     subprocess.run(comando, shell=True)
 
@@ -39,7 +37,6 @@ def menu_pausa() -> None:
 
 
 def input_cancelavel(prompt: str) -> Tuple[str, bool]:
-    """Captura a entrada do usuário e permite cancelar com 'q'."""
     entrada = input(f"{prompt} | [Q] Cancelar: ").strip()
     if entrada.lower() == "q":
         return "", True
@@ -47,12 +44,10 @@ def input_cancelavel(prompt: str) -> Tuple[str, bool]:
 
 
 def hoje() -> str:
-    """Retorna a data atual formatada (YYYY-MM-DD)."""
     return datetime.now().strftime("%Y-%m-%d")
 
 
 def formatar_data(data_str: str) -> str:
-    """Valida e converte sequências de dígitos de datas em YYYY-MM-DD."""
     numeros = "".join(filter(str.isdigit, data_str))
     if len(numeros) != 8:
         return ""
@@ -67,7 +62,6 @@ def formatar_data(data_str: str) -> str:
 
 
 def validar_formatar_doc(doc: str) -> str:
-    """Valida e formata CPF (11 dígitos) ou CNPJ (14 dígitos)."""
     n = "".join(filter(str.isdigit, doc))
     if len(n) not in (11, 14) or len(set(n)) == 1:
         return ""
@@ -140,7 +134,6 @@ def selecionar_salvar(nome_padrao: str = "arquivo.docx", extensoes: List[Tuple[s
     return caminho
 
 
-# Database Operations
 def criar_db(caminho: str) -> None:
     try:
         with sqlite3.connect(caminho) as conn:
@@ -148,10 +141,10 @@ def criar_db(caminho: str) -> None:
             cursor.execute("PRAGMA foreign_keys = ON;")
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS clientes (
-                    CPF_CNPJ TEXT PRIMARY KEY,
                     NOME TEXT NOT NULL,
                     DATA_NASCIMENTO TEXT,
                     IDENTIDADE TEXT,
+                    CPF_CNPJ TEXT PRIMARY KEY,
                     ESTADO_CIVIL TEXT,
                     PROFISSAO TEXT,
                     ENDERECO TEXT,
@@ -196,7 +189,6 @@ def backup_db(origem: str, destino: str) -> None:
         print(f"{VERMELHO}[Erro] Falha ao realizar backup: {e}{RESET}")
 
 
-# Word Processing using python-docx
 def substituir_texto_docx(doc: Document, substituicoes: Dict[str, str]) -> None:
     for p in doc.paragraphs:
         for ch, vl in substituicoes.items():
@@ -215,7 +207,6 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
     dados = {}
     cursor = conn.cursor()
     
-    # 1. Tenta buscar primeiro na tabela de processos
     cursor.execute("""
         SELECT PROCESSO, CPF_CNPJ, CLIENTE, PARTE_CONTRARIA, CARTORIO 
         FROM processos WHERE PROCESSO = ? OR CPF_CNPJ = ? LIMIT 1
@@ -232,7 +223,6 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
         dados["<<PARTECONTRARIA>>"] = (row["PARTE_CONTRARIA"] or "").upper()
         dados["<<CARTÓRIO>>"] = (row["CARTORIO"] or "").upper()
     else:
-        # 2. Se não achou em processos, busca direto na tabela de clientes pelo CPF
         cursor.execute("SELECT CPF_CNPJ, NOME FROM clientes WHERE CPF_CNPJ = ?", (busca,))
         row_cli = cursor.fetchone()
         if row_cli:
@@ -243,7 +233,6 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
             dados["<<PARTECONTRARIA>>"] = ""
             dados["<<CARTÓRIO>>"] = ""
 
-    # 3. Preenche as datas atuais do sistema
     if cpf_cnpj_alvo:
         dt = datetime.now()
         meses = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", 
@@ -253,7 +242,6 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
         dados["<<MM>>"] = meses[dt.month - 1]
         dados["<<AAAA>>"] = dt.strftime("%Y")
 
-        # 4. Completa com TODOS os dados pessoais do cliente (incluindo EMAIL e DATA_NASCIMENTO)
         cursor.execute("""
             SELECT ENDERECO, PROFISSAO, ESTADO_CIVIL, IDENTIDADE, EMAIL, DATA_NASCIMENTO 
             FROM clientes WHERE CPF_CNPJ = ?
@@ -265,11 +253,8 @@ def preparar_dados_documento(conn: sqlite3.Connection, busca: str) -> Dict[str, 
             dados["<<PROFISSÃO>>"] = (row_c["PROFISSAO"] or "").lower()
             dados["<<ESTADO CIVIL>>"] = (row_c["ESTADO_CIVIL"] or "").lower()
             dados["<<RG>>"] = row_c["IDENTIDADE"] or ""
-            
-            # --- NOVOS CAMPOS ADICIONADOS ---
             dados["<<EMAIL>>"] = (row_c["EMAIL"] or "").lower()
             
-            # Formata a data de nascimento (se estiver no formato YYYY-MM-DD converte para DD/MM/AAAA)
             data_nasc_raw = row_c["DATA_NASCIMENTO"] or ""
             if len(data_nasc_raw) == 10 and "-" in data_nasc_raw:
                 partes = data_nasc_raw.split("-")
@@ -310,7 +295,6 @@ def preencher_docx(conn: sqlite3.Connection) -> None:
             doc.save(destino)
             print(f"\n{VERDE}[OK] Documento gerado com sucesso!{RESET}")
             
-            # Atualizado para evitar o uso do os.system no Linux
             if os.name == 'nt':
                 os.startfile(destino)
             else:
@@ -321,65 +305,85 @@ def preencher_docx(conn: sqlite3.Connection) -> None:
         time.sleep(2)
 
 
-# Features: Cadastros, Edições e Buscas
 def cadastrar_cliente(conn: sqlite3.Connection) -> None:
     while True:
         limpar_terminal()
         print("\n----------- NOVO CADASTRO DE CLIENTE -----------")
         doc_raw, cancel = input_cancelavel("🪪 CPF/CNPJ")
-        if cancel: return
+        if cancel: 
+            return
+        
         cpf = validar_formatar_doc(doc_raw)
         if not cpf:
             print(f"{VERMELHO}[!] Documento inválido.{RESET}")
-            time.sleep(1.5); continue
+            time.sleep(1.5)
+            continue
 
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM clientes WHERE CPF_CNPJ = ?", (cpf,))
         if cursor.fetchone():
             print(f"{AMARELO}[!] Cliente já cadastrado.{RESET}")
-            time.sleep(1.5); continue
+            time.sleep(1.5)
+            continue
 
-        nome, c = input_cancelavel("👤 Nome Completo"); 
+        nome, c = input_cancelavel("👤 Nome Completo") 
         if c: return
-        nasc, c = input_cancelavel("📅 Data Nasc (DDMMAAAA)"); 
+
+        while True:
+            nasc_raw, c = input_cancelavel("📅 Data Nasc (DDMMAAAA)") 
+            if c: return
+            data_nasc = formatar_data(nasc_raw)
+            if data_nasc:
+                break
+            print(f"{VERMELHO}[!] Data inválida. Use o formato DDMMAAAA ou DD/MM/AAAA.{RESET}")
+            time.sleep(1)
+
+        rg, c = input_cancelavel("🪪 RG") 
         if c: return
-        rg, c = input_cancelavel("🪪 RG"); 
+        end, c = input_cancelavel("📍 Endereço") 
         if c: return
-        end, c = input_cancelavel("📍 Endereço"); 
+        tel, c = input_cancelavel("📞 Telefone") 
         if c: return
-        tel, c = input_cancelavel("📞 Telefone"); 
+        email, c = input_cancelavel("📧 Email") 
         if c: return
-        email, c = input_cancelavel("📧 Email"); 
+        est_civil, c = input_cancelavel("📋 Estado Civil") 
         if c: return
-        est_civil, c = input_cancelavel("📋 Estado Civil"); 
+        prof, c = input_cancelavel("💼 Profissão") 
         if c: return
-        prof, c = input_cancelavel("💼 Profissão"); 
+        senha, c = input_cancelavel("🔑 Senha GOV") 
         if c: return
-        senha, c = input_cancelavel("🔑 Senha GOV"); 
-        if c: return
-        obs, c = input_cancelavel("📝 Observações"); 
+        obs, c = input_cancelavel("📝 Observações") 
         if c: return
 
         try:
+            # CORREÇÃO: Ordem explícita correspondendo à tupla de parâmetros
             cursor.execute("""
-                INSERT INTO clientes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (cpf, nome.upper().strip(), formatar_data(nasc), rg.upper().strip(), 
-                  est_civil.upper().strip(), prof.upper().strip(), formatar_endereco(end), 
-                  formatar_telefone(tel), email.lower().strip(), senha, obs.strip()))
+                INSERT INTO clientes (
+                    CPF_CNPJ, NOME, DATA_NASCIMENTO, IDENTIDADE, 
+                    ESTADO_CIVIL, PROFISSAO, ENDERECO, TELEFONE, 
+                    EMAIL, SENHA_GOV, OBS
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                cpf, nome.upper().strip(), data_nasc, rg.upper().strip(), 
+                est_civil.upper().strip(), prof.upper().strip(), formatar_endereco(end), 
+                formatar_telefone(tel), email.lower().strip(), senha.strip(), obs.strip()
+            ))
             conn.commit()
             print(f"\n{VERDE}[OK] Cliente cadastrado com sucesso!{RESET}")
         except Exception as e:
             print(f"{VERMELHO}[ERRO]: {e}{RESET}")
         
         time.sleep(2)
-        cont, _ = input_cancelavel("\nCadastrar outro? [Enter] Sim")
-        if cont.lower() == "q": break
+        cont, cancelou = input_cancelavel("\nCadastrar outro? [Enter] Sim")
+        if cancelou or cont.lower() == "q": 
+            break
 
 
 def buscar_cliente(conn: sqlite3.Connection) -> None:
     while True:
         termo_input = input("\n 👤 Buscar Cliente | [Q] Voltar: ").strip()
-        if termo_input.lower() == "q": return
+        if termo_input.lower() == "q": 
+            return
 
         termo = f"%{termo_input}%"
         pagina = 0
@@ -411,7 +415,6 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
             
             for i, r in enumerate(rows):
                 print("-" * 80)
-                # Tratamento para valores Nulos / Vazios
                 rg = r['IDENTIDADE'] if r['IDENTIDADE'] else 'N/A'
                 profissao = r['PROFISSAO'] if r['PROFISSAO'] else 'N/A'
                 est_civil = r['ESTADO_CIVIL'] if r['ESTADO_CIVIL'] else 'N/A'
@@ -419,30 +422,20 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 email = r['EMAIL'] if r['EMAIL'] else 'N/A'
                 end = r['ENDERECO'] if r['ENDERECO'] else 'N/A'
 
-                # Linha 1: Nome e Identificação
                 print(f"{VERDE}{i + 1}.{RESET} 👤 {AMARELO}{r['NOME']}{RESET}")
                 print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg}")
-                
-                # Linha 2: Dados Pessoais / Profissionais
                 print(f"   💼 PROFISSÃO: {profissao} | 💍 EST. CIVIL: {est_civil}")
-                
-                # Linha 3: Contatos
                 print(f"   📞 TEL: {tel} | ✉️  EMAIL: {email}")
-                
-                # Linha 4: Endereço
                 print(f"   🏠 ENDEREÇO: {end}")
-                
-                # Linha 5: Observações (se houver)
                 if r['OBS']:
                     print(f"   📝 OBS: {r['OBS']}")
             
             print("-" * 80)
-
             print("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
             acao = input("Comando: ").strip().lower()
 
             if acao == "q": 
-                break
+                return
             elif acao in (">", ".") and pagina + 1 < total_paginas: 
                 pagina += 1
             elif acao in ("<", ",") and pagina > 0: 
@@ -462,19 +455,24 @@ def editar_cliente(conn: sqlite3.Connection, cpf: str) -> None:
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM clientes WHERE CPF_CNPJ = ?", (cpf,))
     row = cursor.fetchone()
-    if not row: return
+    if not row: 
+        return
 
     dados = dict(row)
     limpar_terminal()
     print(f"\n{AZUL}Editando Cliente: {dados['NOME']}{RESET}")
+    
     novo_nome, _ = input_cancelavel(f"Nome [{dados['NOME']}]")
-    if novo_nome: dados['NOME'] = novo_nome.upper()
+    if novo_nome: 
+        dados['NOME'] = novo_nome.upper().strip()
 
-    novo_tel, _ = input_cancelavel(f"Telefone [{dados['TELEFONE']}]")
-    if novo_tel: dados['TELEFONE'] = formatar_telefone(novo_tel)
+    novo_tel, _ = input_cancelavel(f"Telefone [{dados['TELEFONE'] or ''}]")
+    if novo_tel: 
+        dados['TELEFONE'] = formatar_telefone(novo_tel)
 
-    nova_obs, _ = input_cancelavel(f"Obs [{dados['OBS']}]")
-    if nova_obs: dados['OBS'] = nova_obs
+    nova_obs, _ = input_cancelavel(f"Obs [{dados['OBS'] or ''}]")
+    if nova_obs: 
+        dados['OBS'] = nova_obs.strip()
 
     cursor.execute("""
         UPDATE clientes SET NOME=?, TELEFONE=?, OBS=? WHERE CPF_CNPJ=?
@@ -489,36 +487,59 @@ def cadastrar_processo(conn: sqlite3.Connection) -> None:
         limpar_terminal()
         print("------- NOVO CADASTRO DE PROCESSO -------")
         proc_raw, c = input_cancelavel("⚖️ Número do Processo")
-        if c: return
+        if c: 
+            return
         num_proc = formatar_processo(proc_raw)
 
         cursor = conn.cursor()
         cursor.execute("SELECT 1 FROM processos WHERE PROCESSO = ?", (num_proc,))
         if cursor.fetchone():
             print(f"{AMARELO}[!] Processo já cadastrado.{RESET}")
-            time.sleep(1.5); continue
+            time.sleep(1.5)
+            continue
 
         doc_cli, c = input_cancelavel("🪪 CPF/CNPJ do Cliente")
-        if c: return
+        if c: 
+            return
+            
         cpf_cli = validar_formatar_doc(doc_cli)
+        if not cpf_cli:
+            print(f"{VERMELHO}[!] CPF/CNPJ inválido.{RESET}")
+            time.sleep(1.5)
+            continue
         
         cursor.execute("SELECT NOME FROM clientes WHERE CPF_CNPJ = ?", (cpf_cli,))
         cli_row = cursor.fetchone()
         if not cli_row:
-            print(f"{VERMELHO}[!] Cliente não cadastrado.{RESET}")
-            time.sleep(2); return
+            print(f"{VERMELHO}[!] Cliente não cadastrado no sistema.{RESET}")
+            time.sleep(2)
+            return
 
         parte, c = input_cancelavel("⚔️ Parte Contrária")
-        if c: return
+        if c: 
+            return
         cartorio, c = input_cancelavel("🏛️ Cartório/Vara")
+        if c: 
+            return
+        
+        dt_dist, c = input_cancelavel("📅 Data Distribuição (DDMMAAAA - Deixe em branco p/ Hoje)")
         if c: return
+        data_distribuicao = formatar_data(dt_dist) if dt_dist else hoje()
+
         obs, c = input_cancelavel("📝 Observações")
-        if c: return
+        if c: 
+            return
 
         try:
             cursor.execute("""
-                INSERT INTO processos VALUES (?, ?, ?, ?, ?, 'ATIVO', ?, ?, ?)
-            """, (num_proc, cpf_cli, cli_row['NOME'], parte.upper(), cartorio.upper(), hoje(), hoje(), obs.upper()))
+                INSERT INTO processos (
+                    PROCESSO, CPF_CNPJ, CLIENTE, PARTE_CONTRARIA, 
+                    CARTORIO, SITUACAO, ULTIMA_VERIFICACAO, DISTRIBUICAO, OBS
+                ) VALUES (?, ?, ?, ?, ?, 'ATIVO', ?, ?, ?)
+            """, (
+                num_proc, cpf_cli, cli_row['NOME'], parte.upper().strip(), 
+                cartorio.upper().strip(), hoje(), data_distribuicao, obs.upper().strip()
+            ))
             conn.commit()
             print(f"\n{VERDE}[OK] Processo cadastrado com sucesso!{RESET}")
         except Exception as e:
@@ -531,7 +552,8 @@ def cadastrar_processo(conn: sqlite3.Connection) -> None:
 def buscar_processo(conn: sqlite3.Connection) -> None:
     while True:
         termo_input = input("\n 📄 Buscar Processo | [Q] Voltar: ").strip()
-        if termo_input.lower() == "q": return
+        if termo_input.lower() == "q": 
+            return
 
         termo = f"%{termo_input}%"
         pagina = 0
@@ -562,7 +584,6 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
 
             print(f"\n{AZUL}===================== PROCESSOS | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} ====================={RESET}")
             for i, r in enumerate(rows):
-                # Tratamento de valores Nulos / Vazios
                 cartorio = r['CARTORIO'] if r['CARTORIO'] else 'N/A'
                 distribuicao = r['DISTRIBUICAO'] if r['DISTRIBUICAO'] else 'N/A'
                 ult_verif = r['ULTIMA_VERIFICACAO'] if r['ULTIMA_VERIFICACAO'] else 'N/A'
@@ -570,7 +591,6 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 contraria = r['PARTE_CONTRARIA'] if r['PARTE_CONTRARIA'] else 'N/A'
                 obs = r['OBS'] if r['OBS'] else ''
 
-                # Formatação da cor da Situação
                 sit_str = r['SITUACAO'] if r['SITUACAO'] else 'N/A'
                 if sit_str == "ATIVO":
                     sit_cor = f"{VERDE}{sit_str}{RESET}"
@@ -580,30 +600,26 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                     sit_cor = sit_str
 
                 print("-" * 80)
-                # Linha 1: Identificador e Situação
                 print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AMARELO}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
-                
-                # Linha 2: Partes do Processo
                 print(f"   👤 CLIENTE: {r['CLIENTE']} (CPF/CNPJ: {cpf_cnpj})")
                 print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
-                
-                # Linha 3: Local e Datas
                 print(f"   🏛️  CARTÓRIO: {cartorio}")
                 print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
-                
-                # Linha 4: Observações (se houver)
                 if obs:
                     print(f"   📝 OBS: {obs}")
 
             print("-" * 80)
-
             print("[<] Ant | [>] Próx | [A+Nº] Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
             acao = input("Comando: ").strip().lower()
 
-            if acao == "q": break
-            elif acao in (">", ".") and pagina + 1 < total_paginas: pagina += 1
-            elif acao in ("<", ",") and pagina > 0: pagina -= 1
-            elif acao == "g": preencher_docx(conn)
+            if acao == "q": 
+                return
+            elif acao in (">", ".") and pagina + 1 < total_paginas: 
+                pagina += 1
+            elif acao in ("<", ",") and pagina > 0: 
+                pagina -= 1
+            elif acao == "g": 
+                preencher_docx(conn)
             elif acao.startswith("a"):
                 try:
                     idx = int(acao.replace("a", "").strip()) - 1
@@ -612,13 +628,15 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                         conn.commit()
                         print(f"{VERDE}[OK] Data de verificação atualizada!{RESET}")
                         time.sleep(0.8)
-                except ValueError: pass
+                except ValueError: 
+                    pass
             elif acao.startswith("e"):
                 try:
                     idx = int(acao.replace("e", "").strip()) - 1
                     if 0 <= idx < len(rows):
                         editar_processo(conn, rows[idx]['PROCESSO'])
-                except ValueError: pass
+                except ValueError: 
+                    pass
 
 
 def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
@@ -666,13 +684,13 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
         houve_alteracao = True
         if opcao == "1":
             v, _ = input_cancelavel("Novo Nome do Cliente")
-            if v: dados['CLIENTE'] = v.upper()
+            if v: dados['CLIENTE'] = v.upper().strip()
         elif opcao == "2":
             v, _ = input_cancelavel("Nova Parte Contrária")
-            if v: dados['PARTE_CONTRARIA'] = v.upper()
+            if v: dados['PARTE_CONTRARIA'] = v.upper().strip()
         elif opcao == "3":
             v, _ = input_cancelavel("Novo Cartório")
-            if v: dados['CARTORIO'] = v.upper()
+            if v: dados['CARTORIO'] = v.upper().strip()
         elif opcao == "4":
             v, _ = input_cancelavel("Nova Situação ([1] ATIVO / [2] CONCLUIDO)")
             if v == "2": dados['SITUACAO'] = "CONCLUIDO"
@@ -682,7 +700,7 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
             if v: dados['DISTRIBUICAO'] = formatar_data(v)
         elif opcao == "6":
             v, _ = input_cancelavel("Nova Observação")
-            if v: dados['OBS'] = v.upper()
+            if v: dados['OBS'] = v.upper().strip()
         else:
             print(f"{AMARELO}Opção inválida.{RESET}")
             houve_alteracao = False
@@ -695,8 +713,11 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
                     CLIENTE = ?, PARTE_CONTRARIA = ?, CARTORIO = ?, 
                     SITUACAO = ?, DISTRIBUICAO = ?, OBS = ?, ULTIMA_VERIFICACAO = ? 
                 WHERE PROCESSO = ?
-            """, (dados['CLIENTE'], dados['PARTE_CONTRARIA'], dados['CARTORIO'], 
-                  dados['SITUACAO'], dados['DISTRIBUICAO'], dados['OBS'].strip(), hoje(), processo_id))
+            """, (
+                dados['CLIENTE'], dados['PARTE_CONTRARIA'], dados['CARTORIO'], 
+                dados['SITUACAO'], dados['DISTRIBUICAO'], (dados['OBS'] or "").strip(), 
+                hoje(), processo_id
+            ))
             conn.commit()
             print(f"\n{VERDE}[OK] Processo atualizado com sucesso!{RESET}")
         except Exception as e:
@@ -715,7 +736,6 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
         limpar_terminal()
         cursor = conn.cursor()
         
-        # 1. Contagem total de processos parados há +25 dias
         cursor.execute("""
             SELECT COUNT(*) FROM processos 
             WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
@@ -729,11 +749,9 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
 
         total_paginas = max(1, (total + limite - 1) // limite)
         
-        # Ajuste de segurança para o índice da página
         if pagina >= total_paginas:
             pagina = total_paginas - 1
 
-        # 2. Busca paginada dos registros
         cursor.execute("""
             SELECT * FROM processos 
             WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
@@ -741,24 +759,30 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
         """, (limite, pagina * limite))
         rows = cursor.fetchall()
 
-        # 3. Exibição da Interface
         print(f"\n{AMARELO}-------------- PROCESSOS PARADOS (HÁ 25+ DIAS) | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} --------------{RESET}")
         for i, r in enumerate(rows):
+            cartorio = r['CARTORIO'] if r['CARTORIO'] else 'N/A'
+            distribuicao = r['DISTRIBUICAO'] if r['DISTRIBUICAO'] else 'N/A'
+            ult_verif = r['ULTIMA_VERIFICACAO'] if r['ULTIMA_VERIFICACAO'] else 'N/A'
+            cpf_cnpj = r['CPF_CNPJ'] if r['CPF_CNPJ'] else 'N/A'
+            contraria = r['PARTE_CONTRARIA'] if r['PARTE_CONTRARIA'] else 'N/A'
+            obs = r['OBS'] if r['OBS'] else ''
+
             print("-" * 80)
-            print(f"{VERDE}{i + 1}.{RESET} 🏛️  CARTÓRIO: {r['CARTORIO']}")
+            print(f"{VERDE}{i + 1}.{RESET} 🏛️  CARTÓRIO: {cartorio}")
             print(f"     📄 PROC: {r['PROCESSO']} | SITUAÇÃO: {VERDE}{r['SITUACAO']}{RESET}")
-            print(f"     ⚠️  ÚLT. VERIF: {r['ULTIMA_VERIFICACAO']} | 📅 DISTR: {r['DISTRIBUICAO']}")
-            print(f"     👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {r['CPF_CNPJ']}")
-            print(f"     ⚔️  CONTRÁRIO: {r['PARTE_CONTRARIA']}")
-            print(f"     📝 OBS: {r['OBS']}")
+            print(f"     ⚠️  ÚLT. VERIF: {ult_verif} | 📅 DISTR: {distribuicao}")
+            print(f"     👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
+            print(f"     ⚔️  CONTRÁRIO: {contraria}")
+            if obs:
+                print(f"     📝 OBS: {obs}")
         print("-" * 80)
 
-        # 4. Navegação e Comandos
         print("[<] Ant | [>] Próx | [A+Nº] Atualizar Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
         acao = input("Comando: ").strip().lower()
 
-        if acao == "q" or acao == "":
-            break
+        if acao == "q":
+            return
         elif acao in (">", ".") and pagina + 1 < total_paginas:
             pagina += 1
         elif acao in ("<", ",") and pagina > 0:
