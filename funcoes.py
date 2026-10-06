@@ -421,14 +421,25 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 tel = r['TELEFONE'] if r['TELEFONE'] else 'N/A'
                 email = r['EMAIL'] if r['EMAIL'] else 'N/A'
                 end = r['ENDERECO'] if r['ENDERECO'] else 'N/A'
+                senha_gov = r['SENHA_GOV'] if r['SENHA_GOV'] else 'N/A'
+                obs = r['OBS'] if r['OBS'] else 'N/A'
+                
+                # Formatação da Data de Nascimento
+                data_nasc_raw = r['DATA_NASCIMENTO'] or ''
+                if len(data_nasc_raw) == 10 and "-" in data_nasc_raw:
+                    p = data_nasc_raw.split("-")
+                    dt_nasc = f"{p[2]}/{p[1]}/{p[0]}"
+                else:
+                    dt_nasc = data_nasc_raw or 'N/A'
 
+                # Exibição completa de TODOS os dados do cliente
                 print(f"{VERDE}{i + 1}.{RESET} 👤 {AMARELO}{r['NOME']}{RESET}")
-                print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg}")
+                print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg} | 📅 NASC: {dt_nasc}")
                 print(f"   💼 PROFISSÃO: {profissao} | 💍 EST. CIVIL: {est_civil}")
-                print(f"   📞 TEL: {tel} | ✉️  EMAIL: {email}")
+                print(f"   📞 TEL: {tel} | ✉️️  EMAIL: {email}")
                 print(f"   🏠 ENDEREÇO: {end}")
-                if r['OBS']:
-                    print(f"   📝 OBS: {r['OBS']}")
+                print(f"   🔑 SENHA GOV: {senha_gov}")
+                print(f"   📝 OBS: {obs}")
             
             print("-" * 80)
             print("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
@@ -451,34 +462,132 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                     pass
 
 
-def editar_cliente(conn: sqlite3.Connection, cpf: str) -> None:
+def editar_cliente(conn: sqlite3.Connection, cpf: str = "") -> None:
+    cliente_cpf = cpf
+
+    if not cliente_cpf:
+        busca, cancelou = input_cancelavel("Digite o CPF/CNPJ do cliente para editar")
+        if cancelou or not busca:
+            return
+        cliente_cpf = validar_formatar_doc(busca)
+
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM clientes WHERE CPF_CNPJ = ?", (cpf,))
+    cursor.execute("SELECT * FROM clientes WHERE CPF_CNPJ = ?", (cliente_cpf,))
     row = cursor.fetchone()
-    if not row: 
+
+    if not row:
+        print(f"{VERMELHO}[!] Cliente não encontrado.{RESET}")
+        time.sleep(1.5)
         return
 
     dados = dict(row)
-    limpar_terminal()
-    print(f"\n{AZUL}Editando Cliente: {dados['NOME']}{RESET}")
+    houve_alteracao = False
+
+    while True:
+        limpar_terminal()
+        print(f"\n{AZUL}================ EDITAR CLIENTE ================{RESET}")
+        print(f"CPF/CNPJ (Chave)     : {dados['CPF_CNPJ']}")
+        print(f"1. Nome              : {dados['NOME'] or 'N/A'}")
+        print(f"2. Data Nascimento   : {dados['DATA_NASCIMENTO'] or 'N/A'}")
+        print(f"3. RG / Identidade   : {dados['IDENTIDADE'] or 'N/A'}")
+        print(f"4. Estado Civil      : {dados['ESTADO_CIVIL'] or 'N/A'}")
+        print(f"5. Profissão         : {dados['PROFISSAO'] or 'N/A'}")
+        print(f"6. Endereço          : {dados['ENDERECO'] or 'N/A'}")
+        print(f"7. Telefone          : {dados['TELEFONE'] or 'N/A'}")
+        print(f"8. Email             : {dados['EMAIL'] or 'N/A'}")
+        print(f"9. Senha GOV         : {dados['SENHA_GOV'] or 'N/A'}")
+        print(f"10. Observações      : {dados['OBS'] or 'N/A'}")
+        print(f"\n0. {VERDE}SALVAR ALTERAÇÕES{RESET}")
+        print("q. Cancelar e Sair")
+
+        opcao, cancelou = input_cancelavel("\nEscolha o campo para editar")
+        if cancelou or opcao.lower() == "q":
+            print("\nEdição cancelada.")
+            time.sleep(1)
+            return
+        if opcao == "0":
+            break
+
+        if opcao == "1":
+            v, _ = input_cancelavel(f"Novo Nome [{dados['NOME'] or ''}]")
+            if v: 
+                dados['NOME'] = v.upper().strip()
+                houve_alteracao = True
+        elif opcao == "2":
+            v, _ = input_cancelavel(f"Nova Data Nasc (DDMMAAAA) [{dados['DATA_NASCIMENTO'] or ''}]")
+            if v:
+                dt = formatar_data(v)
+                if dt:
+                    dados['DATA_NASCIMENTO'] = dt
+                    houve_alteracao = True
+                else:
+                    print(f"{VERMELHO}[!] Data inválida.{RESET}")
+                    time.sleep(1)
+        elif opcao == "3":
+            v, _ = input_cancelavel(f"Novo RG [{dados['IDENTIDADE'] or ''}]")
+            if v: 
+                dados['IDENTIDADE'] = v.upper().strip()
+                houve_alteracao = True
+        elif opcao == "4":
+            v, _ = input_cancelavel(f"Novo Estado Civil [{dados['ESTADO_CIVIL'] or ''}]")
+            if v: 
+                dados['ESTADO_CIVIL'] = v.upper().strip()
+                houve_alteracao = True
+        elif opcao == "5":
+            v, _ = input_cancelavel(f"Nova Profissão [{dados['PROFISSAO'] or ''}]")
+            if v: 
+                dados['PROFISSAO'] = v.upper().strip()
+                houve_alteracao = True
+        elif opcao == "6":
+            v, _ = input_cancelavel(f"Novo Endereço [{dados['ENDERECO'] or ''}]")
+            if v: 
+                dados['ENDERECO'] = formatar_endereco(v)
+                houve_alteracao = True
+        elif opcao == "7":
+            v, _ = input_cancelavel(f"Novo Telefone [{dados['TELEFONE'] or ''}]")
+            if v: 
+                dados['TELEFONE'] = formatar_telefone(v)
+                houve_alteracao = True
+        elif opcao == "8":
+            v, _ = input_cancelavel(f"Novo Email [{dados['EMAIL'] or ''}]")
+            if v: 
+                dados['EMAIL'] = v.lower().strip()
+                houve_alteracao = True
+        elif opcao == "9":
+            v, _ = input_cancelavel(f"Nova Senha GOV [{dados['SENHA_GOV'] or ''}]")
+            if v: 
+                dados['SENHA_GOV'] = v.strip()
+                houve_alteracao = True
+        elif opcao == "10":
+            v, _ = input_cancelavel(f"Nova Observação [{dados['OBS'] or ''}]")
+            if v: 
+                dados['OBS'] = v.strip()
+                houve_alteracao = True
+        else:
+            print(f"{AMARELO}Opção inválida.{RESET}")
+            time.sleep(1)
+
+    if houve_alteracao:
+        try:
+            cursor.execute("""
+                UPDATE clientes SET 
+                    NOME = ?, DATA_NASCIMENTO = ?, IDENTIDADE = ?, 
+                    ESTADO_CIVIL = ?, PROFISSAO = ?, ENDERECO = ?, 
+                    TELEFONE = ?, EMAIL = ?, SENHA_GOV = ?, OBS = ?
+                WHERE CPF_CNPJ = ?
+            """, (
+                dados['NOME'], dados['DATA_NASCIMENTO'], dados['IDENTIDADE'],
+                dados['ESTADO_CIVIL'], dados['PROFISSAO'], dados['ENDERECO'],
+                dados['TELEFONE'], dados['EMAIL'], dados['SENHA_GOV'],
+                dados['OBS'], cliente_cpf
+            ))
+            conn.commit()
+            print(f"\n{VERDE}[OK] Cliente atualizado com sucesso!{RESET}")
+        except Exception as e:
+            print(f"{VERMELHO}[ERRO] Falha ao atualizar: {e}{RESET}")
+    else:
+        print("\nNenhuma alteração foi feita.")
     
-    novo_nome, _ = input_cancelavel(f"Nome [{dados['NOME']}]")
-    if novo_nome: 
-        dados['NOME'] = novo_nome.upper().strip()
-
-    novo_tel, _ = input_cancelavel(f"Telefone [{dados['TELEFONE'] or ''}]")
-    if novo_tel: 
-        dados['TELEFONE'] = formatar_telefone(novo_tel)
-
-    nova_obs, _ = input_cancelavel(f"Obs [{dados['OBS'] or ''}]")
-    if nova_obs: 
-        dados['OBS'] = nova_obs.strip()
-
-    cursor.execute("""
-        UPDATE clientes SET NOME=?, TELEFONE=?, OBS=? WHERE CPF_CNPJ=?
-    """, (dados['NOME'], dados['TELEFONE'], dados['OBS'], cpf))
-    conn.commit()
-    print(f"{VERDE}[OK] Cliente atualizado!{RESET}")
     time.sleep(1.5)
 
 
@@ -589,7 +698,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 ult_verif = r['ULTIMA_VERIFICACAO'] if r['ULTIMA_VERIFICACAO'] else 'N/A'
                 cpf_cnpj = r['CPF_CNPJ'] if r['CPF_CNPJ'] else 'N/A'
                 contraria = r['PARTE_CONTRARIA'] if r['PARTE_CONTRARIA'] else 'N/A'
-                obs = r['OBS'] if r['OBS'] else ''
+                obs = r['OBS'] if r['OBS'] else 'N/A'
 
                 sit_str = r['SITUACAO'] if r['SITUACAO'] else 'N/A'
                 if sit_str == "ATIVO":
@@ -599,14 +708,14 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 else:
                     sit_cor = sit_str
 
+                # Exibição completa de TODOS os dados do processo
                 print("-" * 80)
                 print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AMARELO}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
-                print(f"   👤 CLIENTE: {r['CLIENTE']} (CPF/CNPJ: {cpf_cnpj})")
+                print(f"   👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
                 print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
-                print(f"   🏛️  CARTÓRIO: {cartorio}")
+                print(f"   🏛️  CARTÓRIO/VARA: {cartorio}")
                 print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
-                if obs:
-                    print(f"   📝 OBS: {obs}")
+                print(f"   📝 OBS: {obs}")
 
             print("-" * 80)
             print("[<] Ant | [>] Próx | [A+Nº] Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
@@ -665,45 +774,65 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
 
     while True:
         limpar_terminal()
-        print(f"\n{AZUL}Processo: {RESET}{processo_id}")
-        print(f"1. Cliente (Nome)    : {dados['CLIENTE']}")
-        print(f"2. Parte Contrária   : {dados['PARTE_CONTRARIA']}")
-        print(f"3. Cartório          : {dados['CARTORIO']}")
-        print(f"4. Situação          : {dados['SITUACAO']}")
-        print(f"5. Distribuição      : {dados['DISTRIBUICAO']}")
-        print(f"6. Observações       : {dados['OBS']}")
-        print(f"0. {VERDE}SALVAR ALTERAÇÕES{RESET}")
+        print(f"\n{AZUL}================ EDITAR PROCESSO ================{RESET}")
+        print(f"Processo (Chave)     : {processo_id}")
+        print(f"1. Cliente (Nome)    : {dados['CLIENTE'] or 'N/A'}")
+        print(f"2. Parte Contrária   : {dados['PARTE_CONTRARIA'] or 'N/A'}")
+        print(f"3. Cartório / Vara   : {dados['CARTORIO'] or 'N/A'}")
+        print(f"4. Situação          : {dados['SITUACAO'] or 'N/A'}")
+        print(f"5. Distribuição      : {dados['DISTRIBUICAO'] or 'N/A'}")
+        print(f"6. Observações       : {dados['OBS'] or 'N/A'}")
+        print(f"\n0. {VERDE}SALVAR ALTERAÇÕES{RESET}")
         print("q. Cancelar e Sair")
 
         opcao, cancelou = input_cancelavel("\nEscolha o campo para editar")
         if cancelou or opcao.lower() == "q":
+            print("\nEdição cancelada.")
+            time.sleep(1)
             return
         if opcao == "0":
             break
 
-        houve_alteracao = True
         if opcao == "1":
-            v, _ = input_cancelavel("Novo Nome do Cliente")
-            if v: dados['CLIENTE'] = v.upper().strip()
+            v, _ = input_cancelavel(f"Novo Nome do Cliente [{dados['CLIENTE'] or ''}]")
+            if v: 
+                dados['CLIENTE'] = v.upper().strip()
+                houve_alteracao = True
         elif opcao == "2":
-            v, _ = input_cancelavel("Nova Parte Contrária")
-            if v: dados['PARTE_CONTRARIA'] = v.upper().strip()
+            v, _ = input_cancelavel(f"Nova Parte Contrária [{dados['PARTE_CONTRARIA'] or ''}]")
+            if v: 
+                dados['PARTE_CONTRARIA'] = v.upper().strip()
+                houve_alteracao = True
         elif opcao == "3":
-            v, _ = input_cancelavel("Novo Cartório")
-            if v: dados['CARTORIO'] = v.upper().strip()
+            v, _ = input_cancelavel(f"Novo Cartório/Vara [{dados['CARTORIO'] or ''}]")
+            if v: 
+                dados['CARTORIO'] = v.upper().strip()
+                houve_alteracao = True
         elif opcao == "4":
-            v, _ = input_cancelavel("Nova Situação ([1] ATIVO / [2] CONCLUIDO)")
-            if v == "2": dados['SITUACAO'] = "CONCLUIDO"
-            elif v == "1": dados['SITUACAO'] = "ATIVO"
+            v, _ = input_cancelavel(f"Nova Situação ([1] ATIVO / [2] CONCLUIDO) [{dados['SITUACAO']}]")
+            if v == "2": 
+                dados['SITUACAO'] = "CONCLUIDO"
+                houve_alteracao = True
+            elif v == "1": 
+                dados['SITUACAO'] = "ATIVO"
+                houve_alteracao = True
         elif opcao == "5":
-            v, _ = input_cancelavel("Nova Data Distribuição (DDMMAAAA)")
-            if v: dados['DISTRIBUICAO'] = formatar_data(v)
+            v, _ = input_cancelavel(f"Nova Data Distribuição (DDMMAAAA) [{dados['DISTRIBUICAO'] or ''}]")
+            if v: 
+                dt = formatar_data(v)
+                if dt:
+                    dados['DISTRIBUICAO'] = dt
+                    houve_alteracao = True
+                else:
+                    print(f"{VERMELHO}[!] Data inválida.{RESET}")
+                    time.sleep(1)
         elif opcao == "6":
-            v, _ = input_cancelavel("Nova Observação")
-            if v: dados['OBS'] = v.upper().strip()
+            v, _ = input_cancelavel(f"Nova Observação [{dados['OBS'] or ''}]")
+            if v: 
+                dados['OBS'] = v.upper().strip()
+                houve_alteracao = True
         else:
             print(f"{AMARELO}Opção inválida.{RESET}")
-            houve_alteracao = False
             time.sleep(1)
 
     if houve_alteracao:
@@ -726,7 +855,6 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
         print("\nNenhuma alteração foi feita.")
     
     time.sleep(1.5)
-
 
 def ver_andamento(conn: sqlite3.Connection) -> None:
     pagina = 0
