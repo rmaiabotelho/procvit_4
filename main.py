@@ -61,7 +61,7 @@ def main():
                 time.sleep(1.5)
         elif opcao == "q":
             limpar_terminal()
-            break
+            return
         else:
             print(f"\n{AMARELO}Opção inválida! Tente novamente.{RESET}")
             time.sleep(1)

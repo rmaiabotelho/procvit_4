@@ -381,9 +381,13 @@ def cadastrar_cliente(conn: sqlite3.Connection) -> None:
 
 def buscar_cliente(conn: sqlite3.Connection) -> None:
     while True:
-        termo_input = input("\n 👤 Buscar Cliente | [Q] Voltar: ").strip()
+        limpar_terminal()
+        termo_input = input("\n 👤 Buscar Cliente | [Q] Voltar ao Menu: ").strip()
         if termo_input.lower() == "q": 
-            return
+            return  # Volta ao menu principal
+
+        if not termo_input:
+            continue
 
         termo = f"%{termo_input}%"
         pagina = 0
@@ -397,6 +401,12 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 WHERE NOME LIKE ? OR CPF_CNPJ LIKE ? OR PROFISSAO LIKE ? OR EMAIL LIKE ?
             """, (termo, termo, termo, termo))
             total = cursor.fetchone()[0]
+
+            if total == 0:
+                print(f"\n{AMARELO}[!] Nenhum registro encontrado.{RESET}")
+                time.sleep(1.5)
+                break  # Volta para o prompt de nova busca
+
             total_paginas = max(1, (total + limite - 1) // limite)
 
             cursor.execute("""
@@ -405,11 +415,6 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 ORDER BY NOME ASC LIMIT ? OFFSET ?
             """, (termo, termo, termo, termo, limite, pagina * limite))
             rows = cursor.fetchall()
-
-            if not rows and pagina == 0:
-                print(f"\n{AMARELO}[!] Nenhum registro encontrado.{RESET}")
-                time.sleep(1.5)
-                break
 
             print(f"\n{AZUL}===================== CLIENTES | Pág: {pagina + 1}/{total_paginas} | TOTAL: {total} ====================={RESET}")
             
@@ -424,7 +429,6 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 senha_gov = r['SENHA_GOV'] if r['SENHA_GOV'] else 'N/A'
                 obs = r['OBS'] if r['OBS'] else 'N/A'
                 
-                # Formatação da Data de Nascimento
                 data_nasc_raw = r['DATA_NASCIMENTO'] or ''
                 if len(data_nasc_raw) == 10 and "-" in data_nasc_raw:
                     p = data_nasc_raw.split("-")
@@ -432,21 +436,20 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                 else:
                     dt_nasc = data_nasc_raw or 'N/A'
 
-                # Exibição completa de TODOS os dados do cliente
                 print(f"{VERDE}{i + 1}.{RESET} 👤 {AMARELO}{r['NOME']}{RESET}")
                 print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg} | 📅 NASC: {dt_nasc}")
                 print(f"   💼 PROFISSÃO: {profissao} | 💍 EST. CIVIL: {est_civil}")
-                print(f"   📞 TEL: {tel} | ✉️️  EMAIL: {email}")
+                print(f"   📞 TEL: {tel} | ✉️  EMAIL: {email}")
                 print(f"   🏠 ENDEREÇO: {end}")
                 print(f"   🔑 SENHA GOV: {senha_gov}")
                 print(f"   📝 OBS: {obs}")
             
             print("-" * 80)
-            print("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
+            print("[<] Ant | [>] Próx | [E+Nº] Editar | [G] Gerar Doc | [Q] Nova Busca")
             acao = input("Comando: ").strip().lower()
 
             if acao == "q": 
-                return
+                break  # Sai do loop de paginação e volta para o campo de busca
             elif acao in (">", ".") and pagina + 1 < total_paginas: 
                 pagina += 1
             elif acao in ("<", ",") and pagina > 0: 
@@ -660,9 +663,13 @@ def cadastrar_processo(conn: sqlite3.Connection) -> None:
 
 def buscar_processo(conn: sqlite3.Connection) -> None:
     while True:
-        termo_input = input("\n 📄 Buscar Processo | [Q] Voltar: ").strip()
+        limpar_terminal()
+        termo_input = input("\n 📄 Buscar Processo | [Q] Voltar ao Menu: ").strip()
         if termo_input.lower() == "q": 
-            return
+            return  # Volta ao menu principal
+
+        if not termo_input:
+            continue
 
         termo = f"%{termo_input}%"
         pagina = 0
@@ -680,7 +687,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
             if total == 0:
                 print(f"\n{AMARELO}[!] Nenhum processo encontrado.{RESET}")
                 time.sleep(1.5)
-                break
+                break  # Volta para o prompt de nova busca
 
             total_paginas = max(1, (total + limite - 1) // limite)
 
@@ -708,7 +715,6 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 else:
                     sit_cor = sit_str
 
-                # Exibição completa de TODOS os dados do processo
                 print("-" * 80)
                 print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AMARELO}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
                 print(f"   👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
@@ -718,11 +724,11 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 print(f"   📝 OBS: {obs}")
 
             print("-" * 80)
-            print("[<] Ant | [>] Próx | [A+Nº] Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Voltar")
+            print("[<] Ant | [>] Próx | [A+Nº] Visto | [E+Nº] Editar | [G] Gerar Doc | [Q] Nova Busca")
             acao = input("Comando: ").strip().lower()
 
             if acao == "q": 
-                return
+                break  # Sai do loop de paginação e volta para o campo de busca
             elif acao in (">", ".") and pagina + 1 < total_paginas: 
                 pagina += 1
             elif acao in ("<", ",") and pagina > 0: 
