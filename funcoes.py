@@ -382,14 +382,12 @@ def cadastrar_cliente(conn: sqlite3.Connection) -> None:
 def buscar_cliente(conn: sqlite3.Connection) -> None:
     while True:
         limpar_terminal()
-        termo_input = input("\n 👤 Buscar Cliente | [Q] Voltar ao Menu: ").strip()
+        termo_input = input("\n 👤 Buscar Cliente (Enter para todos) | [Q] Voltar ao Menu: ").strip()
         if termo_input.lower() == "q": 
-            return  # Volta ao menu principal
+            return
 
-        if not termo_input:
-            continue
-
-        termo = f"%{termo_input}%"
+        # Se pressionar Enter sem digitar nada, busca todos
+        termo = f"%{termo_input}%" if termo_input else "%"
         pagina = 0
         limite = 5
 
@@ -405,7 +403,7 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
             if total == 0:
                 print(f"\n{AMARELO}[!] Nenhum registro encontrado.{RESET}")
                 time.sleep(1.5)
-                break  # Volta para o prompt de nova busca
+                break
 
             total_paginas = max(1, (total + limite - 1) // limite)
 
@@ -449,7 +447,7 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
             acao = input("Comando: ").strip().lower()
 
             if acao == "q": 
-                break  # Sai do loop de paginação e volta para o campo de busca
+                break
             elif acao in (">", ".") and pagina + 1 < total_paginas: 
                 pagina += 1
             elif acao in ("<", ",") and pagina > 0: 
@@ -664,14 +662,12 @@ def cadastrar_processo(conn: sqlite3.Connection) -> None:
 def buscar_processo(conn: sqlite3.Connection) -> None:
     while True:
         limpar_terminal()
-        termo_input = input("\n 📄 Buscar Processo | [Q] Voltar ao Menu: ").strip()
+        termo_input = input("\n 📄 Buscar Processo (Enter para todos) | [Q] Voltar ao Menu: ").strip()
         if termo_input.lower() == "q": 
-            return  # Volta ao menu principal
+            return
 
-        if not termo_input:
-            continue
-
-        termo = f"%{termo_input}%"
+        # Se pressionar Enter sem digitar nada, busca todos
+        termo = f"%{termo_input}%" if termo_input else "%"
         pagina = 0
         limite = 5
 
@@ -687,7 +683,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
             if total == 0:
                 print(f"\n{AMARELO}[!] Nenhum processo encontrado.{RESET}")
                 time.sleep(1.5)
-                break  # Volta para o prompt de nova busca
+                break
 
             total_paginas = max(1, (total + limite - 1) // limite)
 
@@ -728,7 +724,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
             acao = input("Comando: ").strip().lower()
 
             if acao == "q": 
-                break  # Sai do loop de paginação e volta para o campo de busca
+                break
             elif acao in (">", ".") and pagina + 1 < total_paginas: 
                 pagina += 1
             elif acao in ("<", ",") and pagina > 0: 
