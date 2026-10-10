@@ -707,12 +707,12 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 if sit_str == "ATIVO":
                     sit_cor = f"{VERDE}{sit_str}{RESET}"
                 elif sit_str == "CONCLUIDO":
-                    sit_cor = f"{VERMELHO}{sit_str}{RESET}"
+                    sit_cor = f"{AMARELO}{sit_str}{RESET}"
                 else:
                     sit_cor = sit_str
 
                 print("-" * 80)
-                print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AMARELO}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
+                print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AZUL}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
                 print(f"   👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
                 print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
                 print(f"   🏛️  CARTÓRIO/VARA: {cartorio}")
