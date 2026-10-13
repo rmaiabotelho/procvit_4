@@ -713,7 +713,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
 
                 print("-" * 80)
                 print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AZUL}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
-                print(f"   👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
+                print(f"   👤 CLIENTE: {MAGENTA}{r['CLIENTE']}{RESET} | CPF/CNPJ: {cpf_cnpj}")
                 print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
                 print(f"   🏛️  CARTÓRIO/VARA: {cartorio}")
                 print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
@@ -900,9 +900,9 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
 
             print("-" * 80)
             print(f"{VERDE}{i + 1}.{RESET} 🏛️  CARTÓRIO: {cartorio}")
-            print(f"     📄 PROC: {r['PROCESSO']} | SITUAÇÃO: {VERDE}{r['SITUACAO']}{RESET}")
+            print(f"     📄 PROC: {AZUL}{r['PROCESSO']}{RESET} | SITUAÇÃO: {VERDE}{r['SITUACAO']}{RESET}")
             print(f"     ⚠️  ÚLT. VERIF: {ult_verif} | 📅 DISTR: {distribuicao}")
-            print(f"     👤 CLIENTE: {r['CLIENTE']} | CPF/CNPJ: {cpf_cnpj}")
+            print(f"     👤 CLIENTE: {MAGENTA}{r['CLIENTE']}{RESET} | CPF/CNPJ: {cpf_cnpj}")
             print(f"     ⚔️  CONTRÁRIO: {contraria}")
             if obs:
                 print(f"     📝 OBS: {obs}")
