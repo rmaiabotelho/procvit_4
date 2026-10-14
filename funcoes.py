@@ -435,7 +435,7 @@ def buscar_cliente(conn: sqlite3.Connection) -> None:
                     dt_nasc = data_nasc_raw or 'N/A'
 
                 print(f"{VERDE}{i + 1}.{RESET} 👤 {AMARELO}{r['NOME']}{RESET}")
-                print(f"   🪪  CPF/CNPJ: {r['CPF_CNPJ']} | RG: {rg} | 📅 NASC: {dt_nasc}")
+                print(f"   🪪  CPF/CNPJ: {AZUL}{r['CPF_CNPJ']}{RESET} | RG: {rg} | 📅 NASC: {dt_nasc}")
                 print(f"   💼 PROFISSÃO: {profissao} | 💍 EST. CIVIL: {est_civil}")
                 print(f"   📞 TEL: {tel} | ✉️  EMAIL: {email}")
                 print(f"   🏠 ENDEREÇO: {end}")
