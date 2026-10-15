@@ -885,7 +885,8 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
         cursor.execute("""
             SELECT * FROM processos 
             WHERE SITUACAO = 'ATIVO' AND ULTIMA_VERIFICACAO <= date('now', '-25 days')
-            ORDER BY ULTIMA_VERIFICACAO ASC LIMIT ? OFFSET ?
+            ORDER BY (ULTIMA_VERIFICACAO IS NULL OR ULTIMA_VERIFICACAO = '') DESC, ULTIMA_VERIFICACAO ASC 
+            LIMIT ? OFFSET ?
         """, (limite, pagina * limite))
         rows = cursor.fetchall()
 
