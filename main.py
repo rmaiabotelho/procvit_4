@@ -24,7 +24,7 @@ def main():
         print(f"{CIANO}[4] 📑 PETIÇÕES/RECURSOS{RESET}")
         print(f"{MAGENTA}[5] ⚠️  PROCESSOS +25 DIAS SEM VERIFICAÇÃO{RESET}")
         print(f"{AZUL}[6] 💾 BACKUP DO BANCO DE DADOS{RESET}")
-        print(f"{VERMELHO}[Q] SAIR ❌{RESET}")
+        print(f"{VERMELHO}[Q] ❌ SAIR{RESET}")
         print(f"{VERMELHO}{NEGRITO}" + "-------------------------------------------------------".center(50) + RESET)
 
         opcao = input("\nEscolha uma opção: ").strip().lower()
