@@ -858,6 +858,7 @@ def editar_processo(conn: sqlite3.Connection, proc_direto: str = "") -> None:
     
     time.sleep(1.5)
 
+
 def ver_andamento(conn: sqlite3.Connection) -> None:
     pagina = 0
     limite = 5
