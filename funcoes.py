@@ -714,7 +714,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 print("-" * 80)
                 print(f"{VERDE}{i + 1}.{RESET} 📄 PROC: {AZUL}{r['PROCESSO']}{RESET} | SITUAÇÃO: {sit_cor}")
                 print(f"   👤 CLIENTE: {MAGENTA}{r['CLIENTE']}{RESET} | CPF/CNPJ: {cpf_cnpj}")
-                print(f"   ⚔️  PARTE CONTRÁRIA: {contraria}")
+                print(f"   ⚔️  PARTE CONTRÁRIA: {VERMELHO}{r['PARTE_CONTRARIA']}{RESET}")
                 print(f"   🏛️  CARTÓRIO/VARA: {cartorio}")
                 print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
                 print(f"   📝 OBS: {obs}")
@@ -905,7 +905,7 @@ def ver_andamento(conn: sqlite3.Connection) -> None:
             print(f"     📄 PROC: {AZUL}{r['PROCESSO']}{RESET} | SITUAÇÃO: {VERDE}{r['SITUACAO']}{RESET}")
             print(f"     ⚠️  ÚLT. VERIF: {ult_verif} | 📅 DISTR: {distribuicao}")
             print(f"     👤 CLIENTE: {MAGENTA}{r['CLIENTE']}{RESET} | CPF/CNPJ: {cpf_cnpj}")
-            print(f"     ⚔️  CONTRÁRIO: {contraria}")
+            print(f"     ⚔️  CONTRÁRIO: {VERMELHO}{r['PARTE_CONTRARIA']}{RESET}")
             if obs:
                 print(f"     📝 OBS: {obs}")
         print("-" * 80)
