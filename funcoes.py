@@ -716,7 +716,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
                 print(f"   👤 CLIENTE: {MAGENTA}{r['CLIENTE']}{RESET} | CPF/CNPJ: {cpf_cnpj}")
                 print(f"   ⚔️  PARTE CONTRÁRIA: {VERMELHO}{r['PARTE_CONTRARIA']}{RESET}")
                 print(f"   🏛️  CARTÓRIO/VARA: {cartorio}")
-                print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {ult_verif}")
+                print(f"   📅 DISTRIBUIÇÃO: {distribuicao} | 🔍 ÚLT. VERIF: {CIANO}{ult_verif}{RESET}")
                 print(f"   📝 OBS: {obs}")
 
             print("-" * 80)
