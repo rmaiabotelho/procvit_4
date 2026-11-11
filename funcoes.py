@@ -690,7 +690,7 @@ def buscar_processo(conn: sqlite3.Connection) -> None:
             cursor.execute("""
                 SELECT * FROM processos 
                 WHERE PROCESSO LIKE ? OR CLIENTE LIKE ? OR PARTE_CONTRARIA LIKE ? OR CPF_CNPJ LIKE ?
-                ORDER BY DISTRIBUICAO DESC LIMIT ? OFFSET ?
+                ORDER BY (SITUACAO = 'ATIVO') DESC, DISTRIBUICAO DESC LIMIT ? OFFSET ?
             """, (termo, termo, termo, termo, limite, pagina * limite))
             rows = cursor.fetchall()
 
