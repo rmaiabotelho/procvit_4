@@ -97,7 +97,7 @@ def formatar_telefone(telefone: str) -> str:
 def formatar_endereco(endereco: str) -> str:
     texto = re.sub(r'\s+', ' ', endereco.strip())
     
-    minusculas = {"de", "do", "da", "dos", "das", "e", "com", "em", "apto", "apt", "sala", "bloco", "quadra", "lote", "lt.", "qd.", "lt", "qd", "nº.", "casa", "apt.", "apartamento", "andar", "fundos", "sobreloja", "subsolo", "cobertura"}
+    minusculas = {"de", "do", "da", "dos", "das", "e", "com", "em", "apto", "apt", "sala", "bloco", "quadra", "lote", "lt.", "qd.", "lt", "qd", "nº.", "nº", "nº:", "número", "número:", "casa", "apt.", "apt", "apartamento", "andar", "fundos", "sobreloja", "subsolo", "cobertura"}
     maiusculas = {"rj", "sp", "mg", "es", "pr", "sc", "rs", "ms", "mt", "go", "df", "to", "pa", "am", "ro", "ac", "ap", "rr", "ma", "pi", "ce", "rn", "pb", "pe", "al", "se", "ba", "cep", "bpc", "loas"}
     
     palavras = texto.split()
