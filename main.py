@@ -8,7 +8,7 @@ from funcoes import (
 )
 
 # Caminho do Banco de Dados
-CAMINHO_DB = "/home/rodrigo/Documentos/DADOS/procvit.db"
+CAMINHO_DB = "/home/rodrigo/gdrive/DADOS/procvit.db"
 
 
 def main():
