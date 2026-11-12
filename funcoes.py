@@ -95,19 +95,45 @@ def formatar_telefone(telefone: str) -> str:
 
 
 def formatar_endereco(endereco: str) -> str:
+    texto = re.sub(r'\s+', ' ', endereco.strip())
+    
     minusculas = {"de", "do", "da", "dos", "das", "e", "com", "em", "apto", "apt", "sala", "bloco", "quadra", "lote", "lt.", "qd.", "lt", "qd"}
     maiusculas = {"rj", "sp", "mg", "es", "pr", "sc", "rs", "ms", "mt", "go", "df", "to", "pa", "am", "ro", "ac", "ap", "rr", "ma", "pi", "ce", "rn", "pb", "pe", "al", "se", "ba", "cep", "bpc", "loas"}
     
-    palavras = endereco.lower().split()
+    palavras = texto.split()
     resultado = []
-    for p in palavras:
-        if p in maiusculas:
-            resultado.append(p.upper())
-        elif p in minusculas:
-            resultado.append(p)
+    
+    for i, p in enumerate(palavras):
+        if '-' in p:
+            sub_partes = p.split('-')
+            sub_formatadas = []
+            for j, sub in enumerate(sub_partes):
+                sub_limpa = re.sub(r'[^a-zA-ZÀ-ÿ]', '', sub).lower()
+                if sub_limpa in maiusculas:
+                    sub_formatadas.append(sub.upper())
+                elif sub_limpa in minusculas and (i > 0 or j > 0):
+                    sub_formatadas.append(sub_limpa)
+                else:
+                    sub_formatadas.append(sub.capitalize())
+            resultado.append("-".join(sub_formatadas))
         else:
-            resultado.append(p.capitalize())
-    return " ".join(resultado)
+            p_limpa = re.sub(r'[^a-zA-ZÀ-ÿ]', '', p).lower()
+            
+            if p.upper().startswith("CEP"):
+                resultado.append("CEP.:")
+                continue
+                
+            if p_limpa in maiusculas:
+                resultado.append(p.upper())
+            elif p_limpa in minusculas and i > 0:
+                resultado.append(p_limpa)
+            else:
+                resultado.append(p.capitalize())
+                
+    endereco_formatado = " ".join(resultado)
+    endereco_formatado = re.sub(r'\s*,\s*', ', ', endereco_formatado)
+    
+    return endereco_formatado
 
 
 def formatar_processo(processo: str) -> str:
